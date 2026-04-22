@@ -1,0 +1,1 @@
+# mobile_manipulator_rbvogui_plus_moveit_config
