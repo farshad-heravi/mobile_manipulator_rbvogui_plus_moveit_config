@@ -1,0 +1,26 @@
+moveit_setup_assistant_config:
+  urdf:
+    package: robotnik_description
+    relative_path: robots/rbvogui/rbvogui_plus.urdf.xacro
+    xacro_args: namespace:=robot gazebo_ignition:=true ur_type:=ur5e end_effector:=2f85
+  srdf:
+    relative_path: config/rbvogui_plus.srdf
+  package_settings:
+    author_name: Farshad Nozad Heravi
+    author_email: f.n.heravi@gmail.com
+    generated_timestamp: 1773147549
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
+  modified_urdf:
+    xacros:
+      - control_xacro
+  control_xacro:
+    command:
+      - position
+    state:
+      - position
+      - velocity
