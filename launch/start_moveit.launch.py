@@ -197,15 +197,21 @@ def generate_launch_description():
             ],
         )
 
-        timer_action = TimerAction(
+        timer_action_move_group = TimerAction(
             period=8.0,
-            actions=[move_group_node, rviz_node]
+            actions=[move_group_node]
+        )
+
+        timer_action_rviz = TimerAction(
+            period=16.0,
+            actions=[rviz_node]
         )
 
         return [
             log1,
             gripper_controller_spawner,
-            timer_action,
+            timer_action_move_group,
+            timer_action_rviz,
         ]
 
     return LaunchDescription([
