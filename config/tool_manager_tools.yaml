@@ -1,0 +1,18 @@
+tool_manager:
+  ros__parameters:
+    end_effector_frame: "robot_arm_wrist_3_link"
+    tool_names:
+      - rg6
+      - screwdriver
+      - suction_array
+      - custom_tool
+    tool_lock_frames:
+      - robot_tc_clamp_front_left
+      - robot_tc_clamp_front_right
+      - robot_tc_clamp_rear_left
+      - robot_tc_clamp_rear_right
+    tool_base_topics:
+      - /model/robot/detachable_joint/rg6
+      - /model/robot/detachable_joint/screwdriver
+      - /model/robot/detachable_joint/suction_array
+      - /model/robot/detachable_joint/custom_tool

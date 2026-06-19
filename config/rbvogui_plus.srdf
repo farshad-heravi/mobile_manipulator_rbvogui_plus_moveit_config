@@ -12,32 +12,10 @@
     <group name="arm">
         <chain base_link="robot_arm_base_link_inertia" tip_link="robot_arm_tool0"/>
     </group>
-    <group name="hand_rg6">
-        <joint name="robot_arm_rg6_finger_joint"/>
-    </group>
-    <!--GROUP STATES: Purpose: Define a named state for a particular group, in terms of joint values. This is useful to define states like 'folded arms'-->
-    <!-- <group_state name="up" group="arm"/> -->
-    <!-- <group_state name="safe_pose" group="arm"/> -->
-    <!-- <group_state name="folded_pose" group="arm"/> -->
-    <group_state name="fully_opened" group="hand_rg6">
-        <joint name="robot_arm_rg6_finger_joint" value="-0.6283"/>
-    </group_state>
-    <group_state name="fully_closed" group="hand_rg6">
-        <joint name="robot_arm_rg6_finger_joint" value="0.6283"/>
-    </group_state>
-    <group_state name="half_opened" group="hand_rg6">
-        <joint name="robot_arm_rg6_finger_joint" value="0"/>
-    </group_state>
-    <!--END EFFECTOR: Purpose: Represent information about an end effector.-->
-    <end_effector name="hand_rg6" parent_link="robot_arm_tool0" group="hand_rg6" parent_group="arm"/>
+    <!--END EFFECTOR: bare arm tip — tools attach/detach at runtime via DetachableJoint-->
+    <end_effector name="tool0" parent_link="robot_arm_tool0" group="arm"/>
     <!--VIRTUAL JOINT: Purpose: this element defines a virtual joint between a robot link and an external frame of reference (considered fixed with respect to the robot)-->
     <virtual_joint name="virtual_joint" type="floating" parent_frame="robot_map" child_link="robot_base_footprint"/>
-    <!--PASSIVE JOINT: Purpose: this element is used to mark joints that are not actuated-->
-    <passive_joint name="robot_arm_rg6_left_inner_finger_joint"/>
-    <passive_joint name="robot_arm_rg6_left_inner_knuckle_joint"/>
-    <passive_joint name="robot_arm_rg6_right_inner_knuckle_joint"/>
-    <passive_joint name="robot_arm_rg6_right_outer_knuckle_joint"/>
-    <passive_joint name="robot_arm_rg6_right_inner_finger_joint"/>
     <!--DISABLE COLLISIONS: By default it is assumed that any link of the robot could potentially come into collision with any other link in the robot. This tag disables collision checking between a specified pair of links. -->
     <disable_collisions link1="robot_arm_base_link_inertia" link2="robot_arm_shoulder_link" reason="Adjacent"/>
     <disable_collisions link1="robot_arm_base_link_inertia" link2="robot_back_left_base_wheel" reason="Never"/>
@@ -61,48 +39,6 @@
     <disable_collisions link1="robot_arm_forearm_link" link2="robot_arm_upper_arm_link" reason="Adjacent"/>
     <disable_collisions link1="robot_arm_forearm_link" link2="robot_arm_wrist_1_link" reason="Adjacent"/>
     <disable_collisions link1="robot_arm_forearm_link" link2="robot_arm_wrist_2_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_base_link" link2="robot_arm_rg6_left_inner_finger" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_base_link" link2="robot_arm_rg6_left_inner_knuckle" reason="Adjacent"/>
-    <disable_collisions link1="robot_arm_rg6_base_link" link2="robot_arm_rg6_left_outer_knuckle" reason="Adjacent"/>
-    <disable_collisions link1="robot_arm_rg6_base_link" link2="robot_arm_rg6_right_inner_finger" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_base_link" link2="robot_arm_rg6_right_inner_knuckle" reason="Adjacent"/>
-    <disable_collisions link1="robot_arm_rg6_base_link" link2="robot_arm_rg6_right_outer_knuckle" reason="Adjacent"/>
-    <disable_collisions link1="robot_arm_rg6_base_link" link2="robot_arm_wrist_1_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_base_link" link2="robot_arm_wrist_2_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_base_link" link2="robot_arm_wrist_3_link" reason="Adjacent"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_finger" link2="robot_arm_rg6_left_inner_knuckle" reason="Default"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_finger" link2="robot_arm_rg6_left_outer_knuckle" reason="Adjacent"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_finger" link2="robot_arm_rg6_right_inner_knuckle" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_finger" link2="robot_arm_rg6_right_outer_knuckle" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_finger" link2="robot_arm_wrist_1_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_finger" link2="robot_arm_wrist_2_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_finger" link2="robot_arm_wrist_3_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_knuckle" link2="robot_arm_rg6_left_outer_knuckle" reason="User"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_knuckle" link2="robot_arm_rg6_right_inner_finger" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_knuckle" link2="robot_arm_rg6_right_inner_knuckle" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_knuckle" link2="robot_arm_rg6_right_outer_knuckle" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_knuckle" link2="robot_arm_wrist_1_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_knuckle" link2="robot_arm_wrist_2_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_inner_knuckle" link2="robot_arm_wrist_3_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_outer_knuckle" link2="robot_arm_rg6_right_inner_finger" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_outer_knuckle" link2="robot_arm_rg6_right_inner_knuckle" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_outer_knuckle" link2="robot_arm_rg6_right_outer_knuckle" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_outer_knuckle" link2="robot_arm_wrist_1_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_outer_knuckle" link2="robot_arm_wrist_2_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_left_outer_knuckle" link2="robot_arm_wrist_3_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_right_inner_finger" link2="robot_arm_rg6_left_inner_knuckle" reason="User"/> <!-- added -->
-    <disable_collisions link1="robot_arm_rg6_right_inner_finger" link2="robot_arm_rg6_right_inner_knuckle" reason="Default"/>
-    <disable_collisions link1="robot_arm_rg6_right_inner_finger" link2="robot_arm_rg6_right_outer_knuckle" reason="Adjacent"/>
-    <disable_collisions link1="robot_arm_rg6_right_inner_finger" link2="robot_arm_wrist_1_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_right_inner_finger" link2="robot_arm_wrist_2_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_right_inner_finger" link2="robot_arm_wrist_3_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_right_inner_knuckle" link2="robot_arm_rg6_right_outer_knuckle" reason="User"/>
-    <disable_collisions link1="robot_arm_rg6_right_inner_knuckle" link2="robot_arm_wrist_1_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_right_inner_knuckle" link2="robot_arm_wrist_2_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_right_inner_knuckle" link2="robot_arm_wrist_3_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_right_outer_knuckle" link2="robot_arm_wrist_1_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_right_outer_knuckle" link2="robot_arm_wrist_2_link" reason="Never"/>
-    <disable_collisions link1="robot_arm_rg6_right_outer_knuckle" link2="robot_arm_wrist_3_link" reason="Never"/>
     <disable_collisions link1="robot_arm_shoulder_link" link2="robot_arm_upper_arm_link" reason="Adjacent"/>
     <disable_collisions link1="robot_arm_shoulder_link" link2="robot_back_left_base_wheel" reason="Never"/>
     <disable_collisions link1="robot_arm_shoulder_link" link2="robot_back_left_wheel" reason="Never"/>
@@ -137,6 +73,14 @@
     <disable_collisions link1="robot_arm_wrist_1_link" link2="robot_arm_wrist_2_link" reason="Adjacent"/>
     <disable_collisions link1="robot_arm_wrist_1_link" link2="robot_arm_wrist_3_link" reason="Never"/>
     <disable_collisions link1="robot_arm_wrist_2_link" link2="robot_arm_wrist_3_link" reason="Adjacent"/>
+    <!-- tc_robot_side: permanently attached to wrist_3_link; must disable vs. adjacent and nearby links -->
+    <disable_collisions link1="robot_arm_tc_robot_side" link2="robot_arm_wrist_3_link" reason="Adjacent"/>
+    <disable_collisions link1="robot_arm_tc_robot_side" link2="robot_arm_wrist_2_link" reason="Never"/>
+    <disable_collisions link1="robot_arm_tc_robot_side" link2="robot_arm_wrist_1_link" reason="Never"/>
+    <disable_collisions link1="robot_arm_tc_robot_side" link2="robot_arm_forearm_link" reason="Never"/>
+    <disable_collisions link1="robot_arm_tc_robot_side" link2="robot_arm_upper_arm_link" reason="Never"/>
+    <disable_collisions link1="robot_arm_tc_robot_side" link2="robot_arm_shoulder_link" reason="Never"/>
+    <disable_collisions link1="robot_arm_tc_robot_side" link2="robot_arm_base_link_inertia" reason="Never"/>
     <disable_collisions link1="robot_back_left_base_wheel" link2="robot_back_left_wheel" reason="Adjacent"/>
     <disable_collisions link1="robot_back_left_base_wheel" link2="robot_back_right_base_wheel" reason="Adjacent"/>
     <disable_collisions link1="robot_back_left_base_wheel" link2="robot_back_right_wheel" reason="Never"/>

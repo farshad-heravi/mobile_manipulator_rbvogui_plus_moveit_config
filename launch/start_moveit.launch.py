@@ -24,9 +24,9 @@ def generate_launch_description():
         ),
         DeclareLaunchArgument(
             'end_effector',
-            default_value='rg6',
-            choices=['rg6', '2f85', 'screwdriver', 'none'],
-            description='End effector to use',
+            default_value='none',
+            choices=['rg6', 'suction_array', 'screwdriver', 'custom_tool', 'none'],
+            description='Initially attached tool (none = bare arm, detachable scheme)',
         ),
     ]
 
@@ -53,6 +53,7 @@ def generate_launch_description():
                     "use_rviz": use_rviz,
                     "end_effector": end_effector,
                     "prefix": "robot_",
+                    "use_tool_changer": "false",
                 })
             .robot_description_semantic(file_path="config/rbvogui_plus.srdf")
             .trajectory_execution(file_path=moveit_config_file)
@@ -146,20 +147,8 @@ def generate_launch_description():
         # NOTE: Gazebo already starts `joint_state_broadcaster` and `arm_controller`
         # via gz_ros2_control at /robot/controller_manager. No spawners needed here.
 
-        gripper_controller_spawner = Node(
-            package="controller_manager",
-            executable="spawner",
-            arguments=[
-                "onrobot_rg_gripper_controller",
-                "--controller-manager", "/robot/controller_manager",
-                "--param-file", os.path.join(
-                    get_package_share_directory('renee_rbvogui_plus_moveit_config'),
-                    'config', 'gripper_controller_params.yaml'
-                ),
-                "--namespace", "robot",
-            ],
-            output="screen",
-        )
+        # rg6 gripper controller is now spawned by spawn_tools.launch.py
+        # against /rg6_tool/controller_manager (the rg6 separate model).
 
         move_group_node = Node(
             package="moveit_ros_move_group",
@@ -197,19 +186,32 @@ def generate_launch_description():
             ],
         )
 
+        # Publish robot_map→robot_odom at identity so MoveIt can resolve the
+        # virtual_joint (robot_map→robot_base_footprint) via the TF chain
+        # robot_map→robot_odom→robot_base_footprint.  In production this is
+        # replaced by the localization output; here it pins the robot at the
+        # map origin for arm planning while stationary.
+        map_to_odom_tf = Node(
+            package="tf2_ros",
+            executable="static_transform_publisher",
+            name="map_to_odom_tf",
+            arguments=["--frame-id", "robot_map", "--child-frame-id", "robot_odom"],
+            output="screen",
+        )
+
         timer_action_move_group = TimerAction(
             period=8.0,
             actions=[move_group_node]
         )
 
         timer_action_rviz = TimerAction(
-            period=16.0,
+            period=30.0,
             actions=[rviz_node]
         )
 
         return [
             log1,
-            gripper_controller_spawner,
+            map_to_odom_tf,
             timer_action_move_group,
             timer_action_rviz,
         ]
