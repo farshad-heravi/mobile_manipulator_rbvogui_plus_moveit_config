@@ -257,20 +257,30 @@ def generate_launch_description():
         output="screen",
     )
 
-    # ── Initial detach (ensure all tools start in their clamps) ───────────
+    # ── Initial attach/detach (ensure all tools start locked in their clamps) ──
+    # DetachableJoint starts detached by default; we must explicitly attach the
+    # storage joints to hold each tool in its clamp, then detach the arm joints
+    # so no tool is mounted on the arm at startup.
 
-    def make_detach(topic):
+    def make_pub(topic):
         return ExecuteProcess(
             cmd=["ros2", "topic", "pub", "-t", "1", topic,
                  "std_msgs/msg/Empty", "{}"],
             output="screen",
         )
 
+    initial_storage_attach_actions = [
+        make_pub("/model/robot/detachable_joint/rg6_storage/attach"),
+        make_pub("/model/robot/detachable_joint/screwdriver_storage/attach"),
+        make_pub("/model/robot/detachable_joint/suction_array_storage/attach"),
+        make_pub("/model/robot/detachable_joint/custom_tool_storage/attach"),
+    ]
+
     initial_detach_actions = [
-        make_detach("/model/robot/detachable_joint/rg6_arm/detach"),
-        make_detach("/model/robot/detachable_joint/screwdriver_arm/detach"),
-        make_detach("/model/robot/detachable_joint/suction_array_arm/detach"),
-        make_detach("/model/robot/detachable_joint/custom_tool_arm/detach"),
+        make_pub("/model/robot/detachable_joint/rg6_arm/detach"),
+        make_pub("/model/robot/detachable_joint/screwdriver_arm/detach"),
+        make_pub("/model/robot/detachable_joint/suction_array_arm/detach"),
+        make_pub("/model/robot/detachable_joint/custom_tool_arm/detach"),
     ]
 
     # ── rg6 gripper controller spawner ────────────────────────────────────
@@ -351,7 +361,10 @@ def generate_launch_description():
             custom_spawner,
         ]),
 
-        # ── Initial detach after models have loaded ──
+        # ── Attach storage joints so tools are held in their clamps ──
+        TimerAction(period=7.0, actions=initial_storage_attach_actions),
+
+        # ── Detach arm joints (no tool on arm at startup) ──
         TimerAction(period=10.0, actions=initial_detach_actions),
 
         # ── rg6 controllers (after Gazebo model is up) ──
