@@ -98,22 +98,22 @@ def generate_launch_description():
     # Tool spawn positions — tune these to match TC clamp world coordinates
     # after the robot is placed.  Values below are placeholders matching
     # a robot at x=2.5, y=2.5 (demo_spawn.sh default) with arm raised.
-    rg6_x_arg          = DeclareLaunchArgument("rg6_x",          default_value="2.5")
+    rg6_x_arg          = DeclareLaunchArgument("rg6_x",          default_value="2.425")
     rg6_y_arg          = DeclareLaunchArgument("rg6_y",          default_value="2.89")
     rg6_z_arg          = DeclareLaunchArgument("rg6_z",          default_value="0.75")
     rg6_yaw_arg        = DeclareLaunchArgument("rg6_yaw",        default_value="1.57")
 
-    screwdriver_x_arg  = DeclareLaunchArgument("screwdriver_x",  default_value="2.5")
+    screwdriver_x_arg  = DeclareLaunchArgument("screwdriver_x",  default_value="2.425")
     screwdriver_y_arg  = DeclareLaunchArgument("screwdriver_y",  default_value="2.11")
     screwdriver_z_arg  = DeclareLaunchArgument("screwdriver_z",  default_value="0.75")
     screwdriver_yaw_arg = DeclareLaunchArgument("screwdriver_yaw", default_value="1.57")
 
-    suction_x_arg      = DeclareLaunchArgument("suction_array_x",   default_value="2.29")
+    suction_x_arg      = DeclareLaunchArgument("suction_array_x",   default_value="2.215")
     suction_y_arg      = DeclareLaunchArgument("suction_array_y",   default_value="2.89")
     suction_z_arg      = DeclareLaunchArgument("suction_array_z",   default_value="0.75")
     suction_yaw_arg    = DeclareLaunchArgument("suction_array_yaw", default_value="-1.57")
 
-    custom_x_arg       = DeclareLaunchArgument("custom_tool_x",   default_value="2.29")
+    custom_x_arg       = DeclareLaunchArgument("custom_tool_x",   default_value="2.215")
     custom_y_arg       = DeclareLaunchArgument("custom_tool_y",   default_value="2.11")
     custom_z_arg       = DeclareLaunchArgument("custom_tool_z",   default_value="0.75")
     custom_yaw_arg     = DeclareLaunchArgument("custom_tool_yaw", default_value="0.0")
