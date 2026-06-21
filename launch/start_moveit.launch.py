@@ -205,8 +205,9 @@ def generate_launch_description():
         )
 
         timer_action_rviz = TimerAction(
-            period=30.0,
-            actions=[rviz_node]
+            period=40.0,
+            actions=[rviz_node],
+            condition=IfCondition(LaunchConfiguration('use_rviz')),
         )
 
         return [

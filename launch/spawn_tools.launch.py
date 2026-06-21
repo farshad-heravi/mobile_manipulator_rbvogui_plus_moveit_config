@@ -264,7 +264,7 @@ def generate_launch_description():
 
     def make_pub(topic):
         return ExecuteProcess(
-            cmd=["ros2", "topic", "pub", "-t", "1", topic,
+            cmd=["ros2", "topic", "pub", "-t", "5", topic,
                  "std_msgs/msg/Empty", "{}"],
             output="screen",
         )
