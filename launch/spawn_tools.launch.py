@@ -23,8 +23,9 @@ import os
 import launch
 from launch import LaunchDescription
 from launch.actions import (
-    DeclareLaunchArgument, TimerAction, ExecuteProcess
+    DeclareLaunchArgument, ExecuteProcess, RegisterEventHandler
 )
+from launch.event_handlers import OnProcessExit
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution
 from launch_ros.actions import Node
 from launch_ros.descriptions import ParameterValue
@@ -91,8 +92,10 @@ def generate_launch_description():
         "robot_id", default_value="robot"
     )
     spawn_delay_arg = DeclareLaunchArgument(
-        "spawn_delay", default_value="5.0",
-        description="Seconds to wait after RSPs before spawning Gazebo models"
+        "spawn_delay", default_value="30.0",
+        description="Max seconds to wait for each tool's robot_description "
+                     "topic before giving up on spawning its Gazebo model "
+                     "(readiness timeout, not a fixed delay)"
     )
 
     # Tool spawn positions — tune these to match TC clamp world coordinates
@@ -220,15 +223,23 @@ def generate_launch_description():
             "/model/sd_35_screwdriver/pose@geometry_msgs/msg/TFMessage[ignition.msgs.Pose",
             "/model/suction_array/pose@geometry_msgs/msg/TFMessage[ignition.msgs.Pose",
             "/model/custom_tool/pose@geometry_msgs/msg/TFMessage[ignition.msgs.Pose",
-            # Status (Bool) – Gazebo → ROS
-            "/model/robot/detachable_joint/rg6_arm@std_msgs/msg/Bool@ignition.msgs.Boolean",
-            "/model/robot/detachable_joint/rg6_storage@std_msgs/msg/Bool@ignition.msgs.Boolean",
-            "/model/robot/detachable_joint/screwdriver_arm@std_msgs/msg/Bool@ignition.msgs.Boolean",
-            "/model/robot/detachable_joint/screwdriver_storage@std_msgs/msg/Bool@ignition.msgs.Boolean",
-            "/model/robot/detachable_joint/suction_array_arm@std_msgs/msg/Bool@ignition.msgs.Boolean",
-            "/model/robot/detachable_joint/suction_array_storage@std_msgs/msg/Bool@ignition.msgs.Boolean",
-            "/model/robot/detachable_joint/custom_tool_arm@std_msgs/msg/Bool@ignition.msgs.Boolean",
-            "/model/robot/detachable_joint/custom_tool_storage@std_msgs/msg/Bool@ignition.msgs.Boolean",
+            # Status – Gazebo → ROS. The DetachableJoint system (gz-sim 8 /
+            # Harmonic) publishes gz.msgs.StringMsg ("attached"/"detached") on
+            # its output topic, not gz.msgs.Boolean — verified against the
+            # actual plugin (libgz-sim-detachable-joint-system.so) in a
+            # headless test world. The previous std_msgs/msg/Bool@Boolean
+            # declaration never matched the publisher's type, so gz-transport
+            # silently dropped every status message; ros_gz_bridge would log
+            # a type mismatch and no message ever reached tool_manager.cpp's
+            # status subscription.
+            "/model/robot/detachable_joint/rg6_arm@std_msgs/msg/String@ignition.msgs.StringMsg",
+            "/model/robot/detachable_joint/rg6_storage@std_msgs/msg/String@ignition.msgs.StringMsg",
+            "/model/robot/detachable_joint/screwdriver_arm@std_msgs/msg/String@ignition.msgs.StringMsg",
+            "/model/robot/detachable_joint/screwdriver_storage@std_msgs/msg/String@ignition.msgs.StringMsg",
+            "/model/robot/detachable_joint/suction_array_arm@std_msgs/msg/String@ignition.msgs.StringMsg",
+            "/model/robot/detachable_joint/suction_array_storage@std_msgs/msg/String@ignition.msgs.StringMsg",
+            "/model/robot/detachable_joint/custom_tool_arm@std_msgs/msg/String@ignition.msgs.StringMsg",
+            "/model/robot/detachable_joint/custom_tool_storage@std_msgs/msg/String@ignition.msgs.StringMsg",
             # Attach/detach (Empty) – ROS → Gazebo
             "/model/robot/detachable_joint/rg6_arm/attach@std_msgs/msg/Empty]ignition.msgs.Empty",
             "/model/robot/detachable_joint/rg6_arm/detach@std_msgs/msg/Empty]ignition.msgs.Empty",
@@ -257,10 +268,15 @@ def generate_launch_description():
         output="screen",
     )
 
-    # ── Initial attach/detach (ensure all tools start locked in their clamps) ──
+    # Initial attach/detach (ensure all tools start locked in their clamps)
     # DetachableJoint starts detached by default; we must explicitly attach the
     # storage joints to hold each tool in its clamp, then detach the arm joints
     # so no tool is mounted on the arm at startup.
+    #
+    # RSP publishes robot_description -> spawn Gazebo model (create exits
+    # once the entity exists) -> attach storage joint (`ros2 topic pub -t 5`
+    # exits once its 5 publishes are sent) -> detach arm joint -> (rg6 only)
+    # bring up its gripper controllers.
 
     def make_pub(topic):
         return ExecuteProcess(
@@ -269,23 +285,19 @@ def generate_launch_description():
             output="screen",
         )
 
-    initial_storage_attach_actions = [
-        make_pub("/model/robot/detachable_joint/rg6_storage/attach"),
-        make_pub("/model/robot/detachable_joint/screwdriver_storage/attach"),
-        make_pub("/model/robot/detachable_joint/suction_array_storage/attach"),
-        make_pub("/model/robot/detachable_joint/custom_tool_storage/attach"),
-    ]
-
-    initial_detach_actions = [
-        make_pub("/model/robot/detachable_joint/rg6_arm/detach"),
-        make_pub("/model/robot/detachable_joint/screwdriver_arm/detach"),
-        make_pub("/model/robot/detachable_joint/suction_array_arm/detach"),
-        make_pub("/model/robot/detachable_joint/custom_tool_arm/detach"),
-    ]
+    def wait_for_rsp_topic(namespace):
+        return ExecuteProcess(
+            cmd=["wait_for_ros", "--timeout", LaunchConfiguration("spawn_delay"),
+                 "topic", f"/{namespace}/robot_description", "--msg"],
+            name=f"wait_for_{namespace}_robot_description",
+            output="screen",
+        )
 
     # ── rg6 gripper controller spawner ────────────────────────────────────
     # Runs against /rg6_tool/controller_manager (started by gz_ros2_control
-    # inside the rg6_tool Gazebo model).
+    # inside the rg6_tool Gazebo model). `--controller-manager-timeout` lets
+    # the spawner itself wait out the controller_manager service coming up,
+    # instead of a fixed pre-delay.
 
     rg6_jsb_spawner = Node(
         package="controller_manager",
@@ -293,23 +305,27 @@ def generate_launch_description():
         arguments=[
             "joint_state_broadcaster",
             "--controller-manager", "/rg6_tool/controller_manager",
+            "--controller-manager-timeout", "60",
         ],
         parameters=[{"use_sim_time": use_sim_time}],
         output="screen",
     )
 
-    # gz_ros2_control drops onrobot_rg_gripper_controller.type from the CM params
-    # when the controller fails its auto-start (mimic joint unsupported).
-    # We re-set it at t=25s — well after the model-spawn DDS burst at t=5-12s
-    # clears (spawner/detach-pub nodes exit), so ros2 param set has a free slot.
-    # The actual spawner fires at t=28s to let the param settle.
+    # gz_ros2_control drops onrobot_rg_gripper_controller.type from the CM
+    # params when the controller fails its auto-start (mimic joint
+    # unsupported). We must re-set it once the controller_manager is up and
+    # has attempted (and failed) that auto-start — retry instead of guessing
+    # a fixed settle time, since the auto-start failure isn't independently
+    # observable over ROS.
     rg6_gripper_type_setter = ExecuteProcess(
-        cmd=[
-            "ros2", "param", "set",
-            "/rg6_tool/controller_manager",
-            "onrobot_rg_gripper_controller.type",
-            "position_controllers/GripperActionController",
-        ],
+        cmd=["bash", "-c",
+             "for i in $(seq 1 30); do "
+             "ros2 param set /rg6_tool/controller_manager "
+             "onrobot_rg_gripper_controller.type "
+             "position_controllers/GripperActionController "
+             "&& exit 0; sleep 0.5; done; "
+             "echo 'rg6_gripper_type_setter: giving up after 15s' >&2; exit 1"],
+        name="rg6_gripper_type_setter",
         output="screen",
     )
 
@@ -319,6 +335,7 @@ def generate_launch_description():
         arguments=[
             "onrobot_rg_gripper_controller",
             "--controller-manager", "/rg6_tool/controller_manager",
+            "--controller-manager-timeout", "60",
             "-p", os.path.join(pkg_campetella, "models", "rg6_tool", "config", "rg6_controllers.yaml"),
         ],
         parameters=[{"use_sim_time": use_sim_time}],
@@ -326,6 +343,10 @@ def generate_launch_description():
     )
 
     # ── tool_manager ──────────────────────────────────────────────────────
+    # Starts immediately: service/topic setup doesn't require Gazebo to be up
+    # yet. Verified attach/detach behavior (waiting for bridge subscribers,
+    # confirming status instead of assuming success) lives in tool_manager.cpp
+    # itself.
 
     tool_manager_node = Node(
         package="campetella_sim",
@@ -338,6 +359,45 @@ def generate_launch_description():
         output="screen",
     )
 
+    # ── Per-tool event chains ───────────────────────────────────────────────
+
+    wait_rg6_rsp = wait_for_rsp_topic("rg6_tool")
+    rg6_storage_attach = make_pub("/model/robot/detachable_joint/rg6_storage/attach")
+    rg6_arm_detach = make_pub("/model/robot/detachable_joint/rg6_arm/detach")
+
+    wait_screwdriver_rsp = wait_for_rsp_topic("sd_35_screwdriver")
+    screwdriver_storage_attach = make_pub("/model/robot/detachable_joint/screwdriver_storage/attach")
+    screwdriver_arm_detach = make_pub("/model/robot/detachable_joint/screwdriver_arm/detach")
+
+    wait_suction_rsp = wait_for_rsp_topic("suction_array")
+    suction_storage_attach = make_pub("/model/robot/detachable_joint/suction_array_storage/attach")
+    suction_arm_detach = make_pub("/model/robot/detachable_joint/suction_array_arm/detach")
+
+    wait_custom_rsp = wait_for_rsp_topic("custom_tool")
+    custom_storage_attach = make_pub("/model/robot/detachable_joint/custom_tool_storage/attach")
+    custom_arm_detach = make_pub("/model/robot/detachable_joint/custom_tool_arm/detach")
+
+    tool_chain_events = [
+        RegisterEventHandler(OnProcessExit(target_action=wait_rg6_rsp, on_exit=[rg6_spawner])),
+        RegisterEventHandler(OnProcessExit(target_action=rg6_spawner, on_exit=[rg6_storage_attach])),
+        RegisterEventHandler(OnProcessExit(target_action=rg6_storage_attach, on_exit=[rg6_arm_detach])),
+        RegisterEventHandler(OnProcessExit(target_action=rg6_arm_detach, on_exit=[rg6_jsb_spawner])),
+        RegisterEventHandler(OnProcessExit(target_action=rg6_jsb_spawner, on_exit=[rg6_gripper_type_setter])),
+        RegisterEventHandler(OnProcessExit(target_action=rg6_gripper_type_setter, on_exit=[rg6_gripper_spawner])),
+
+        RegisterEventHandler(OnProcessExit(target_action=wait_screwdriver_rsp, on_exit=[screwdriver_spawner])),
+        RegisterEventHandler(OnProcessExit(target_action=screwdriver_spawner, on_exit=[screwdriver_storage_attach])),
+        RegisterEventHandler(OnProcessExit(target_action=screwdriver_storage_attach, on_exit=[screwdriver_arm_detach])),
+
+        RegisterEventHandler(OnProcessExit(target_action=wait_suction_rsp, on_exit=[suction_spawner])),
+        RegisterEventHandler(OnProcessExit(target_action=suction_spawner, on_exit=[suction_storage_attach])),
+        RegisterEventHandler(OnProcessExit(target_action=suction_storage_attach, on_exit=[suction_arm_detach])),
+
+        RegisterEventHandler(OnProcessExit(target_action=wait_custom_rsp, on_exit=[custom_spawner])),
+        RegisterEventHandler(OnProcessExit(target_action=custom_spawner, on_exit=[custom_storage_attach])),
+        RegisterEventHandler(OnProcessExit(target_action=custom_storage_attach, on_exit=[custom_arm_detach])),
+    ]
+
     return LaunchDescription([
         # ── Arguments ──
         use_sim_time_arg, robot_id_arg, spawn_delay_arg,
@@ -346,34 +406,17 @@ def generate_launch_description():
         suction_x_arg, suction_y_arg, suction_z_arg, suction_yaw_arg,
         custom_x_arg, custom_y_arg, custom_z_arg, custom_yaw_arg,
 
-        # ── RSPs start immediately ──
+        # ── RSPs, bridge, and tool_manager start immediately ──
         rg6_rsp,
         screwdriver_rsp,
         suction_rsp,
         custom_rsp,
         bridge,
+        tool_manager_node,
 
-        # ── Gazebo spawns after RSPs are up ──
-        TimerAction(period=LaunchConfiguration("spawn_delay"), actions=[
-            rg6_spawner,
-            screwdriver_spawner,
-            suction_spawner,
-            custom_spawner,
-        ]),
+        # ── Per-tool waiters start immediately; everything else in each
+        #    tool's chain fires off the previous step's real process exit ──
+        wait_rg6_rsp, wait_screwdriver_rsp, wait_suction_rsp, wait_custom_rsp,
 
-        # ── Attach storage joints so tools are held in their clamps ──
-        TimerAction(period=7.0, actions=initial_storage_attach_actions),
-
-        # ── Detach arm joints (no tool on arm at startup) ──
-        TimerAction(period=10.0, actions=initial_detach_actions),
-
-        # ── rg6 controllers (after Gazebo model is up) ──
-        TimerAction(period=12.0, actions=[rg6_jsb_spawner]),
-        # Set type after DDS burst from model-spawn phase settles (~25s)
-        TimerAction(period=25.0, actions=[rg6_gripper_type_setter]),
-        # Spawn 3s later so the CM has ingested the type param
-        TimerAction(period=28.0, actions=[rg6_gripper_spawner]),
-
-        # ── tool_manager ──
-        TimerAction(period=8.0, actions=[tool_manager_node]),
+        *tool_chain_events,
     ])

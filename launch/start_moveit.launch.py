@@ -2,12 +2,29 @@ import os
 from launch import LaunchDescription
 from launch_param_builder import get_package_share_directory
 from launch_ros.actions import Node, PushRosNamespace
-from launch.actions import DeclareLaunchArgument, GroupAction, TimerAction, IncludeLaunchDescription, OpaqueFunction, LogInfo
+from launch.actions import DeclareLaunchArgument, EmitEvent, ExecuteProcess, GroupAction, RegisterEventHandler, TimerAction, IncludeLaunchDescription, OpaqueFunction, LogInfo
+from launch.event_handlers import OnProcessExit
+from launch.events import Shutdown
 from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LaunchConfiguration, PathJoinSubstitution, PythonExpression
 from launch_ros.substitutions import FindPackageShare
 from moveit_configs_utils import MoveItConfigsBuilder
 from launch.launch_description_sources import PythonLaunchDescriptionSource
+
+
+def _on_success_or_shutdown(actions, failure_message):
+    def _handler(event, context):
+        if event.returncode == 0:
+            return actions
+
+        reason = f'{failure_message} wait_for_ros exited with code {event.returncode}.'
+        return [
+            LogInfo(msg=reason),
+            EmitEvent(event=Shutdown(reason=reason)),
+        ]
+
+    return _handler
+
 
 def generate_launch_description():
     
@@ -41,7 +58,7 @@ def generate_launch_description():
         log1 = LogInfo( msg=['Loading Controllers for Simulation'] )
 
         rviz_config = PathJoinSubstitution(
-            [FindPackageShare("renee_rbvogui_plus_moveit_config"), "config", "moveit.rviz"] # TODO
+            [FindPackageShare("renee_rbvogui_plus_moveit_config"), "config", "moveit.rviz"]
         ) 
 
         # moveit config
@@ -199,22 +216,51 @@ def generate_launch_description():
             output="screen",
         )
 
-        timer_action_move_group = TimerAction(
-            period=8.0,
-            actions=[move_group_node]
+        # Start move_group once gz_ros2_control has actually brought the arm's controller up
+        wait_for_arm_controller = ExecuteProcess(
+            cmd=[
+                'wait_for_ros', '--timeout', '90',
+                'controller', '/robot/controller_manager', 'joint_trajectory_controller',
+                '--state', 'active',
+            ],
+            name='wait_for_arm_controller',
+            output='screen',
         )
-
-        timer_action_rviz = TimerAction(
-            period=40.0,
-            actions=[rviz_node],
+        # Start RViz once move_group's action interface is actually up
+        wait_for_move_group = ExecuteProcess(
+            cmd=[
+                'wait_for_ros', '--timeout', '90',
+                'action', '/robot/move_action',
+            ],
+            name='wait_for_move_group',
+            output='screen',
             condition=IfCondition(LaunchConfiguration('use_rviz')),
+        )
+        start_move_group_when_ready = RegisterEventHandler(
+            OnProcessExit(
+                target_action=wait_for_arm_controller,
+                on_exit=_on_success_or_shutdown(
+                    [move_group_node, wait_for_move_group],
+                    'Not starting move_group:',
+                ),
+            )
+        )
+        start_rviz_when_ready = RegisterEventHandler(
+            OnProcessExit(
+                target_action=wait_for_move_group,
+                on_exit=_on_success_or_shutdown(
+                    [rviz_node],
+                    'Not starting RViz:',
+                ),
+            )
         )
 
         return [
             log1,
             map_to_odom_tf,
-            timer_action_move_group,
-            timer_action_rviz,
+            wait_for_arm_controller,
+            start_move_group_when_ready,
+            start_rviz_when_ready,
         ]
 
     return LaunchDescription([

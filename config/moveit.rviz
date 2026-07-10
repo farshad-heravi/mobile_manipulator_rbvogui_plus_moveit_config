@@ -14,19 +14,26 @@ Visualization Manager:
       Name: Grid
       Value: true
     - Class: moveit_rviz_plugin/MotionPlanning
+      Enabled: false
       Move Group Namespace: /robot
       Name: MotionPlanning
       Planned Path:
         Loop Animation: true
         State Display Time: 0.05 s
         Trajectory Topic: /robot/display_planned_path
+      Planning Request:
+        Interactive Marker Size: 0
+        Planning Group: arm
+        Query Goal State: false
+        Query Start State: false
+        Show Workspace: false
       Planning Scene Topic: /robot/monitored_planning_scene
       Robot Description: robot_description
       Scene Geometry:
         Scene Alpha: 1
       Scene Robot:
         Robot Alpha: 0.5
-      Value: true
+      Value: false
     - Class: rviz_default_plugins/Image
       Enabled: true
       Name: ArmCamera
