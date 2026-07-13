@@ -34,12 +34,6 @@ Visualization Manager:
       Scene Robot:
         Robot Alpha: 0.5
       Value: false
-    - Class: rviz_default_plugins/Image
-      Enabled: true
-      Name: ArmCamera
-      Topic:
-        Value: /robot/arm_rgbd_camera/color/image_raw
-      Value: true
   Global Options:
     Fixed Frame: robot_map
   Tools:
