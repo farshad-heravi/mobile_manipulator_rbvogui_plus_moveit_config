@@ -377,6 +377,16 @@ def generate_launch_description():
     custom_storage_attach = make_pub("/model/robot/detachable_joint/custom_tool_storage/attach")
     custom_arm_detach = make_pub("/model/robot/detachable_joint/custom_tool_arm/detach")
 
+    # Tool chains run strictly one after another (rg6 -> screwdriver ->
+    # suction_array -> custom_tool) instead of all four in parallel. Spawning
+    # all four at once was slamming CycloneDDS with a burst of concurrent
+    # short-lived participants (create, ros2 topic pub, wait_for_ros for all
+    # 4 tools nearly simultaneously), which randomly exhausted CycloneDDS's
+    # participant-index pool ("Failed to find a free participant index for
+    # domain 0") and aborted whichever tool's `create` process lost the race
+    # — observed as suction_array/screwdriver silently failing to spawn while
+    # rg6/custom_tool happened to get a slot. Serializing keeps at most one
+    # tool's worth of transient nodes alive at a time.
     tool_chain_events = [
         RegisterEventHandler(OnProcessExit(target_action=wait_rg6_rsp, on_exit=[rg6_spawner])),
         RegisterEventHandler(OnProcessExit(target_action=rg6_spawner, on_exit=[rg6_storage_attach])),
@@ -384,14 +394,17 @@ def generate_launch_description():
         RegisterEventHandler(OnProcessExit(target_action=rg6_arm_detach, on_exit=[rg6_jsb_spawner])),
         RegisterEventHandler(OnProcessExit(target_action=rg6_jsb_spawner, on_exit=[rg6_gripper_type_setter])),
         RegisterEventHandler(OnProcessExit(target_action=rg6_gripper_type_setter, on_exit=[rg6_gripper_spawner])),
+        RegisterEventHandler(OnProcessExit(target_action=rg6_gripper_spawner, on_exit=[wait_screwdriver_rsp])),
 
         RegisterEventHandler(OnProcessExit(target_action=wait_screwdriver_rsp, on_exit=[screwdriver_spawner])),
         RegisterEventHandler(OnProcessExit(target_action=screwdriver_spawner, on_exit=[screwdriver_storage_attach])),
         RegisterEventHandler(OnProcessExit(target_action=screwdriver_storage_attach, on_exit=[screwdriver_arm_detach])),
+        RegisterEventHandler(OnProcessExit(target_action=screwdriver_arm_detach, on_exit=[wait_suction_rsp])),
 
         RegisterEventHandler(OnProcessExit(target_action=wait_suction_rsp, on_exit=[suction_spawner])),
         RegisterEventHandler(OnProcessExit(target_action=suction_spawner, on_exit=[suction_storage_attach])),
         RegisterEventHandler(OnProcessExit(target_action=suction_storage_attach, on_exit=[suction_arm_detach])),
+        RegisterEventHandler(OnProcessExit(target_action=suction_arm_detach, on_exit=[wait_custom_rsp])),
 
         RegisterEventHandler(OnProcessExit(target_action=wait_custom_rsp, on_exit=[custom_spawner])),
         RegisterEventHandler(OnProcessExit(target_action=custom_spawner, on_exit=[custom_storage_attach])),
@@ -414,9 +427,10 @@ def generate_launch_description():
         bridge,
         tool_manager_node,
 
-        # ── Per-tool waiters start immediately; everything else in each
-        #    tool's chain fires off the previous step's real process exit ──
-        wait_rg6_rsp, wait_screwdriver_rsp, wait_suction_rsp, wait_custom_rsp,
+        # ── Tool chains run one at a time; only the first waiter starts
+        #    immediately, the rest are triggered at the end of the previous
+        #    tool's chain (see tool_chain_events above) ──
+        wait_rg6_rsp,
 
         *tool_chain_events,
     ])
