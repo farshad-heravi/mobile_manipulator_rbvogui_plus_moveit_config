@@ -45,6 +45,12 @@ def generate_launch_description():
             choices=['rg6', 'suction_array', 'screwdriver', 'custom_tool', 'none'],
             description='Initially attached tool (none = bare arm, detachable scheme)',
         ),
+        DeclareLaunchArgument(
+            'wrist_camera',
+            default_value='stereolabs_zed2i',
+            choices=['stereolabs_zed2i', 'realsense_d435i', 'none'],
+            description='Camera type to use on the wrist (none = no camera)',
+        ),
     ]
 
     def launch_setup(context, *args, **kwargs):
@@ -52,7 +58,7 @@ def generate_launch_description():
         use_rviz = context.launch_configurations.get('use_rviz', True)
         use_sim_time_bool = use_sim_time=='true'
         end_effector = context.launch_configurations.get('end_effector', 'rg6')
-        
+        wrist_camera = context.launch_configurations.get('wrist_camera', 'stereolabs_zed2i')
         moveit_config_file = "config/moveit_controllers.yaml"
         joint_controllers_file = os.path.join( get_package_share_directory('renee_rbvogui_plus_moveit_config'), 'config', 'ros2_controllers.yaml' )
         log1 = LogInfo( msg=['Loading Controllers for Simulation'] )
@@ -71,6 +77,7 @@ def generate_launch_description():
                     "end_effector": end_effector,
                     "prefix": "robot_",
                     "use_tool_changer": "false",
+                    "wrist_camera": wrist_camera,
                 })
             .robot_description_semantic(file_path="config/rbvogui_plus.srdf")
             .trajectory_execution(file_path=moveit_config_file)
