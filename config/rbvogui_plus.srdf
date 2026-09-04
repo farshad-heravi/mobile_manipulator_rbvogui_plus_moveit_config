@@ -77,6 +77,8 @@
     <disable_collisions link1="robot_arm_rgbd_camera_bracket_link" link2="robot_arm_tool0" reason="Adjacent"/>
     <disable_collisions link1="robot_arm_rgbd_camera_base_link" link2="robot_arm_rgbd_camera_bracket_link" reason="Adjacent"/>
     <disable_collisions link1="robot_arm_rgbd_camera_bracket_link" link2="robot_arm_tc_robot_side" reason="Adjacent"/>
+    <disable_collisions link1="robot_arm_rgbd_camera_bracket_link" link2="robot_arm_rgbd_camera_link" reason="Adjacent"/>
+    <disable_collisions link1="robot_arm_rgbd_camera_bracket_link" link2="robot_arm_wrist_3_link" reason="Adjacent"/>
     <!-- tc_robot_side: permanently attached to the camera adapter bracket (flange -> camera adapter -> tc_robot_side); must disable vs. adjacent and nearby links -->
     <disable_collisions link1="robot_arm_tc_robot_side" link2="robot_arm_wrist_3_link" reason="Adjacent"/>
     <disable_collisions link1="robot_arm_tc_robot_side" link2="robot_arm_wrist_2_link" reason="Never"/>
