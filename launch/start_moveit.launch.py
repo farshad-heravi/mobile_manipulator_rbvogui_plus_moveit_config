@@ -51,6 +51,11 @@ def generate_launch_description():
             choices=['stereolabs_zed2i', 'realsense_d435i', 'none'],
             description='Camera type to use on the wrist (none = no camera)',
         ),
+        DeclareLaunchArgument(
+            'is_localization_enabled',
+            default_value='false',
+            description='Localization publishes robot_map→robot_odom; if false, a static transform is published instead',
+        ),
     ]
 
     def launch_setup(context, *args, **kwargs):
@@ -221,6 +226,7 @@ def generate_launch_description():
             name="map_to_odom_tf",
             arguments=["--frame-id", "robot_map", "--child-frame-id", "robot_odom"],
             output="screen",
+            condition=UnlessCondition(LaunchConfiguration('is_localization_enabled')),
         )
 
         # Start move_group once gz_ros2_control has actually brought the arm's controller up
