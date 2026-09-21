@@ -1,0 +1,11 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="rbvogui_plus">
+  <!-- Full geometry for MoveIt. Hardware configuration lives in the
+       arm-only description consumed by ur_robot_driver. -->
+  <xacro:arg name="gazebo_ignition" default="false" />
+  <xacro:arg name="end_effector" default="none" />
+  <xacro:arg name="use_tool_changer" default="false" />
+  <xacro:arg name="safety_limits" default="true" />
+
+  <xacro:include filename="$(find robotnik_description)/robots/rbvogui/rbvogui_plus.urdf.xacro" />
+</robot>

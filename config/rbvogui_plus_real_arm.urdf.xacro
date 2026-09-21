@@ -1,0 +1,91 @@
+<?xml version="1.0"?>
+<robot xmlns:xacro="http://www.ros.org/wiki/xacro" name="rbvogui_plus_real_arm">
+  <!-- These two arguments are required internally by the shared arm macro.
+       They are intentionally not exposed by the launch file. -->
+  <xacro:arg name="ur_type" default="ur5e" />
+  <xacro:arg name="gazebo_ignition" default="false" />
+
+  <xacro:arg name="robot_ip" default="" />
+  <xacro:arg name="joint_limit_params" default="$(find ur_description)/config/ur5e/joint_limits.yaml" />
+  <xacro:arg name="kinematics_params" default="$(find ur_description)/config/ur5e/default_kinematics.yaml" />
+  <xacro:arg name="physical_params" default="$(find ur_description)/config/ur5e/physical_parameters.yaml" />
+  <xacro:arg name="visual_params" default="$(find ur_description)/config/ur5e/visual_parameters.yaml" />
+  <xacro:arg name="safety_limits" default="true" />
+  <xacro:arg name="safety_pos_margin" default="0.15" />
+  <xacro:arg name="safety_k_position" default="20" />
+
+  <xacro:arg name="headless_mode" default="false" />
+  <xacro:arg name="script_filename" default="" />
+  <xacro:arg name="input_recipe_filename" default="" />
+  <xacro:arg name="output_recipe_filename" default="" />
+  <xacro:arg name="reverse_ip" default="0.0.0.0" />
+  <xacro:arg name="script_command_port" default="50004" />
+  <xacro:arg name="reverse_port" default="50001" />
+  <xacro:arg name="script_sender_port" default="50002" />
+  <xacro:arg name="trajectory_port" default="50003" />
+  <xacro:arg name="use_mock_hardware" default="false" />
+  <xacro:arg name="mock_sensor_commands" default="false" />
+
+  <xacro:arg name="use_tool_communication" default="false" />
+  <xacro:arg name="tool_voltage" default="0" />
+  <xacro:arg name="tool_parity" default="0" />
+  <xacro:arg name="tool_baud_rate" default="115200" />
+  <xacro:arg name="tool_stop_bits" default="1" />
+  <xacro:arg name="tool_rx_idle_chars" default="1.5" />
+  <xacro:arg name="tool_tx_idle_chars" default="3.5" />
+  <xacro:arg name="tool_device_name" default="/tmp/ttyUR" />
+  <xacro:arg name="tool_tcp_port" default="54321" />
+  <xacro:arg name="wrist_camera" default="stereolabs_zed2i" />
+
+  <!-- The mobile-base RSP already owns this frame. This description only
+       publishes its fixed connection to the arm and the arm subtree. -->
+  <link name="robot_chassis_link" />
+
+  <xacro:include filename="$(find robotnik_sensors)/urdf/all_sensors.urdf.xacro" />
+  <xacro:include filename="$(find robotnik_description)/urdf/arms/ur_macro.urdf.xacro" />
+  <xacro:arm_ur
+    ur_type="ur5e"
+    frame_prefix="robot_arm_"
+    parent="robot_chassis_link"
+    gazebo_ignition="false"
+    end_effector="none"
+    has_wrist_camera="true"
+    node_namespace="robot"
+    wrist_camera="$(arg wrist_camera)"
+    joint_limit_params_file="$(arg joint_limit_params)"
+    kinematics_params_file="$(arg kinematics_params)"
+    physical_params_file="$(arg physical_params)"
+    visual_params_file="$(arg visual_params)"
+    safety_limits="$(arg safety_limits)"
+    safety_pos_margin="$(arg safety_pos_margin)"
+    safety_k_position="$(arg safety_k_position)">
+    <origin xyz="0.08 0.0 0.25" rpy="0 0 0" />
+  </xacro:arm_ur>
+
+  <xacro:include filename="$(find ur_robot_driver)/urdf/ur.ros2_control.xacro" />
+  <xacro:ur_ros2_control
+    name="ur5e"
+    tf_prefix="robot_arm_"
+    kinematics_parameters_file="$(arg kinematics_params)"
+    robot_ip="$(arg robot_ip)"
+    script_filename="$(arg script_filename)"
+    input_recipe_filename="$(arg input_recipe_filename)"
+    output_recipe_filename="$(arg output_recipe_filename)"
+    use_mock_hardware="$(arg use_mock_hardware)"
+    mock_sensor_commands="$(arg mock_sensor_commands)"
+    headless_mode="$(arg headless_mode)"
+    use_tool_communication="$(arg use_tool_communication)"
+    tool_voltage="$(arg tool_voltage)"
+    tool_parity="$(arg tool_parity)"
+    tool_baud_rate="$(arg tool_baud_rate)"
+    tool_stop_bits="$(arg tool_stop_bits)"
+    tool_rx_idle_chars="$(arg tool_rx_idle_chars)"
+    tool_tx_idle_chars="$(arg tool_tx_idle_chars)"
+    tool_device_name="$(arg tool_device_name)"
+    tool_tcp_port="$(arg tool_tcp_port)"
+    reverse_ip="$(arg reverse_ip)"
+    script_command_port="$(arg script_command_port)"
+    reverse_port="$(arg reverse_port)"
+    script_sender_port="$(arg script_sender_port)"
+    trajectory_port="$(arg trajectory_port)" />
+</robot>
